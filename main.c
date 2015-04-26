@@ -382,8 +382,8 @@ int main(int argc, char *argv[])
 	kd_add_box(ktree, -1, 25, 23, 35, 25);
 	kd_add_box(ktree, -1, 12, 7, 48, 23);
 	kd_add_box(ktree, -1, 62, 12, 68, 23);
-	kd_add_box(ktree, -1, 51, 13, 54, 19);
-	kd_add_box(ktree, -1, 56, 13, 59, 19);
+	kd_add_box(ktree, -1, 51, 14, 54, 18);
+	kd_add_box(ktree, -1, 56, 14, 59, 18);
 	kd_add_box(ktree, -1, 48, 15, 62, 17);
 	kd_add_box(ktree, -1, 68, 21, 70, 23);
 
