@@ -82,10 +82,10 @@ int render_pillar(kdtree *ktree, int rnode, int tmin, int tmax,
 		// Do nearest node if time in range
 		// Otherwise do farthest node if in range
 		// Otherwise return air
-		if(time >= tmin + 0x10)
+		if(time > tmin)
 		{
 			// Check if we also have a far node
-			if(time < tmax - 0x10)
+			if(time < tmax)
 			{
 				// Do near node first
 				int ret = render_pillar(ktree, near_node,
@@ -103,7 +103,7 @@ int render_pillar(kdtree *ktree, int rnode, int tmin, int tmax,
 				rnode = near_node;
 				tmax = MIN(time, tmax);
 			}
-		} else if(time < tmax - 0x10) {
+		} else if(time < tmax) {
 			// Continue onto near node
 			rnode = far_node;
 			tmin = MAX(time, tmin);
