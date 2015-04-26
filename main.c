@@ -173,6 +173,8 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 			int16_t *nodeloc = NULL;
 			int o1 = (kd->axis == 0 ? x1 : y1);
 			int o2 = (kd->axis == 0 ? x2 : y2);
+			int ro1 = (kd->axis == 0 ? rx1 : ry1);
+			int ro2 = (kd->axis == 0 ? rx2 : ry2);
 			assert(o1 < o2); // strictly less
 
 			if(o1 >= kd->offs && o2 >= kd->offs)
@@ -190,7 +192,7 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 			switch(kd->axis)
 			{
 				case 0:
-					if(y1 >= ry1)
+					if(y1 == ry1)
 					{
 						nidx = kd_add_node(ktree, 1, y1, lidx, node_bg, icontain);
 						*nodeloc = nidx;
@@ -198,7 +200,7 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 						nodeloc = &ktree->data[lidx].ipos;
 					}
 
-					if(y2 <= ry2)
+					if(y2 == ry2)
 					{
 						nidx = kd_add_node(ktree, 1, y2, lidx, icontain, node_bg);
 						*nodeloc = nidx;
@@ -209,7 +211,7 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 					break;
 
 				case 1:
-					if(x1 >= rx1)
+					if(x1 == rx1)
 					{
 						nidx = kd_add_node(ktree, 0, x1, lidx, node_bg, icontain);
 						*nodeloc = nidx;
@@ -217,7 +219,7 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 						nodeloc = &ktree->data[lidx].ipos;
 					}
 
-					if(x2 <= rx2)
+					if(x2 == rx2)
 					{
 						nidx = kd_add_node(ktree, 0, x2, lidx, icontain, node_bg);
 						*nodeloc = nidx;
@@ -229,7 +231,7 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 			}
 
 			// Add neg node
-			if(o1 != kd->offs)
+			if(o1 != kd->offs && o1 == ro1)
 			{
 				nidx = kd_add_node(ktree, kd->axis, o1, lidx, node_bg, icontain);
 				*nodeloc = nidx;
@@ -238,7 +240,7 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 			}
 
 			// Add pos node
-			if(o2 != kd->offs)
+			if(o2 != kd->offs && o2 == ro2)
 			{
 				nidx = kd_add_node(ktree, kd->axis, o2, lidx, icontain, node_bg);
 				*nodeloc = nidx;
@@ -360,7 +362,7 @@ kdnode base_nodes[MAX_KNODES];
 
 int main(int argc, char *argv[])
 {
-	int x, y;
+	int x, y, i;
 
 #ifdef TARGET_GBA
 	kdtree *ktree = &base_tree;
@@ -373,10 +375,10 @@ int main(int argc, char *argv[])
 	printf("kd tree %p\n", ktree);
 
 	// fill
-	kd_add_box(ktree, -5, 48, 14, 62, 18);
-	kd_add_box(ktree, -2, 10, 5, 50, 25);
 	kd_add_box(ktree, -6, 45, 28, 65, 30);
+	kd_add_box(ktree, -2, 10, 5, 50, 25);
 	kd_add_box(ktree, -4, 60, 10, 70, 25);
+	kd_add_box(ktree, -5, 48, 14, 62, 18);
 
 	// cut
 	kd_add_box(ktree, -1, 25, 23, 35, 25);
@@ -389,6 +391,20 @@ int main(int argc, char *argv[])
 
 	// subfill -2
 	kd_add_box(ktree, -3, 20, 10, 35, 15);
+
+	printf("\nOptimising\n");
+	for(i = ktree->size-1; i >= 0; i--)
+	{
+		kdnode *kd = &ktree->data[i];
+		if(kd->ineg == kd->ipos && kd->iparent >= 0)
+		{
+			printf("merging %i->%i->(%i, %i)\n",
+				kd->iparent, i, kd->ineg, kd->ipos);
+			kdnode *kpar = &ktree->data[kd->iparent];
+			if(kpar->ineg == i) kpar->ineg = kd->ineg;
+			if(kpar->ipos == i) kpar->ipos = kd->ipos;
+		}
+	}
 
 	printf("\nTree:\n");
 	kd_print(ktree, -1, 0, '=');
@@ -443,6 +459,8 @@ int main(int argc, char *argv[])
 
 		printf("\n");
 	}
+
+	printf("\nNode count: %i\n", ktree->size);
 
 #ifdef TARGET_GBA
 	render_loop(ktree);
