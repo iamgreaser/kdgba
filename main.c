@@ -143,14 +143,27 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 	// If we have an empty tree, create root
 	if(ktree->size == 0)
 	{
-		int idx0 = kd_add_node(ktree, 0, x1,   -1, -1, icontain);
-		int idx1 = kd_add_node(ktree, 1, y1, idx0, -1, icontain);
-		int idx2 = kd_add_node(ktree, 0, x2, idx1, icontain, -1);
-		int idx3 = kd_add_node(ktree, 1, y2, idx2, icontain, -1);
+		if(0 && rx2-rx1 > ry2-ry1) // FIXME
+		{
+			int idx0 = kd_add_node(ktree, 1, ry1,   -1, -1, icontain);
+			int idx1 = kd_add_node(ktree, 0, rx2, idx0, icontain, -1);
+			int idx2 = kd_add_node(ktree, 1, ry2, idx1, icontain, -1);
+			int idx3 = kd_add_node(ktree, 0, rx1, idx2, -1, icontain);
 
-		ktree->data[idx0].ipos = idx1;
-		ktree->data[idx1].ipos = idx2;
-		ktree->data[idx2].ineg = idx3;
+			ktree->data[idx0].ipos = idx1;
+			ktree->data[idx1].ineg = idx2;
+			ktree->data[idx2].ineg = idx3;
+
+		} else {
+			int idx0 = kd_add_node(ktree, 0, rx1,   -1, -1, icontain);
+			int idx1 = kd_add_node(ktree, 1, ry1, idx0, -1, icontain);
+			int idx2 = kd_add_node(ktree, 0, rx2, idx1, icontain, -1);
+			int idx3 = kd_add_node(ktree, 1, ry2, idx2, icontain, -1);
+
+			ktree->data[idx0].ipos = idx1;
+			ktree->data[idx1].ipos = idx2;
+			ktree->data[idx2].ineg = idx3;
+		}
 
 		return;
 	}
@@ -192,17 +205,17 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 			switch(kd->axis)
 			{
 				case 0:
-					if(y1 == ry1)
+					if(y1 < ry1)
 					{
-						nidx = kd_add_node(ktree, 1, y1, lidx, node_bg, icontain);
+						nidx = kd_add_node(ktree, 1, ry1, lidx, node_bg, icontain);
 						*nodeloc = nidx;
 						lidx = nidx;
 						nodeloc = &ktree->data[lidx].ipos;
 					}
 
-					if(y2 == ry2)
+					if(y2 > ry2)
 					{
-						nidx = kd_add_node(ktree, 1, y2, lidx, icontain, node_bg);
+						nidx = kd_add_node(ktree, 1, ry2, lidx, icontain, node_bg);
 						*nodeloc = nidx;
 						lidx = nidx;
 						nodeloc = &ktree->data[lidx].ineg;
@@ -211,17 +224,17 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 					break;
 
 				case 1:
-					if(x1 == rx1)
+					if(x1 < rx1)
 					{
-						nidx = kd_add_node(ktree, 0, x1, lidx, node_bg, icontain);
+						nidx = kd_add_node(ktree, 0, rx1, lidx, node_bg, icontain);
 						*nodeloc = nidx;
 						lidx = nidx;
 						nodeloc = &ktree->data[lidx].ipos;
 					}
 
-					if(x2 == rx2)
+					if(x2 > rx2)
 					{
-						nidx = kd_add_node(ktree, 0, x2, lidx, icontain, node_bg);
+						nidx = kd_add_node(ktree, 0, rx2, lidx, icontain, node_bg);
 						*nodeloc = nidx;
 						lidx = nidx;
 						nodeloc = &ktree->data[lidx].ineg;
@@ -231,18 +244,18 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 			}
 
 			// Add neg node
-			if(o1 != kd->offs && o1 == ro1)
+			if(o1 < ro1)
 			{
-				nidx = kd_add_node(ktree, kd->axis, o1, lidx, node_bg, icontain);
+				nidx = kd_add_node(ktree, kd->axis, ro1, lidx, node_bg, icontain);
 				*nodeloc = nidx;
 				lidx = nidx;
 				nodeloc = &ktree->data[lidx].ipos;
 			}
 
 			// Add pos node
-			if(o2 != kd->offs && o2 == ro2)
+			if(o2 > ro2)
 			{
-				nidx = kd_add_node(ktree, kd->axis, o2, lidx, icontain, node_bg);
+				nidx = kd_add_node(ktree, kd->axis, ro2, lidx, icontain, node_bg);
 				*nodeloc = nidx;
 				lidx = nidx;
 				nodeloc = &ktree->data[lidx].ineg;
@@ -258,8 +271,8 @@ void kd_add_box_direct(kdtree *ktree, int parent, int rnode,
 
 	// Get offsets according to node axis
 	assert(kd->axis == 0 || kd->axis == 1);
-	int offsn = (kd->axis == 0 ? x1 : y1);
-	int offsp = (kd->axis == 0 ? x2 : y2);
+	int offsn = (kd->axis == 0 ? MAX(x1, rx1) : MAX(y1, ry1));
+	int offsp = (kd->axis == 0 ? MIN(x2, rx2) : MIN(y2, ry2));
 
 	printf("offs %i < %i < %i\n", offsn, kd->offs, offsp);
 
@@ -324,7 +337,7 @@ void kd_add_conv_poly(kdtree *ktree, int icontain, int ptcount, int *ptlist)
 	}
 }
 
-void kd_add_box(kdtree *ktree, int icontain, int x1, int y1, int x2, int y2)
+void kd_add_box(kdtree *ktree, int group, int icontain, int x1, int y1, int x2, int y2)
 {
 	/*
 	int ptlist[4*2];
@@ -337,7 +350,8 @@ void kd_add_box(kdtree *ktree, int icontain, int x1, int y1, int x2, int y2)
 	kd_add_conv_poly(ktree, icontain, 4, ptlist);
 	*/
 
-	kd_add_box_direct(ktree, -1, -1, x1, y1, x2, y2, x1, y1, x2, y2, icontain);
+	kd_add_box_direct(ktree, -1, -1, x1-1, y1-1, x2+1, y2+1, x1, y1, x2, y2, icontain);
+	//kd_add_box_direct(ktree, -1, -1, x1, y1, x2, y2, x1, y1, x2, y2, icontain);
 }
 
 #ifndef TARGET_GBA
@@ -365,6 +379,9 @@ int main(int argc, char *argv[])
 	int x, y, i;
 
 #ifdef TARGET_GBA
+	while((VCOUNT&0xFF) != 10)
+		;
+	((volatile uint16_t *)VPAL0)[0] = 0x1F;
 	kdtree *ktree = &base_tree;
 	ktree->size = 0;
 	ktree->maxsize = MAX_KNODES;
@@ -375,22 +392,25 @@ int main(int argc, char *argv[])
 	printf("kd tree %p\n", ktree);
 
 	// fill
-	kd_add_box(ktree, -6, 45, 28, 65, 30);
-	kd_add_box(ktree, -2, 10, 5, 50, 25);
-	kd_add_box(ktree, -4, 60, 10, 70, 25);
-	kd_add_box(ktree, -5, 48, 14, 62, 18);
+	kd_add_box(ktree, 0, -2, 10, 5, 50, 25);
+	kd_add_box(ktree, 0, -4, 60, 10, 70, 25);
+	kd_add_box(ktree, 0, -5, 48, 14, 62, 18);
+	kd_add_box(ktree, 0, -6, 45, 28, 65, 30);
 
 	// cut
-	kd_add_box(ktree, -1, 25, 23, 35, 25);
-	kd_add_box(ktree, -1, 12, 7, 48, 23);
-	kd_add_box(ktree, -1, 62, 12, 68, 23);
-	kd_add_box(ktree, -1, 51, 14, 54, 18);
-	kd_add_box(ktree, -1, 56, 14, 59, 18);
-	kd_add_box(ktree, -1, 48, 15, 62, 17);
-	kd_add_box(ktree, -1, 68, 21, 70, 23);
+	kd_add_box(ktree, 1, -1, 25, 23, 35, 25);
+	kd_add_box(ktree, 1, -1, 12, 7, 48, 23);
+	kd_add_box(ktree, 1, -1, 62, 12, 68, 23);
+	kd_add_box(ktree, 1, -1, 48, 15, 62, 17);
+	kd_add_box(ktree, 1, -1, 51, 14, 54, 18);
+	kd_add_box(ktree, 1, -1, 56, 14, 59, 18);
+	kd_add_box(ktree, 1, -1, 68, 21, 70, 23);
 
 	// subfill -2
-	kd_add_box(ktree, -3, 20, 10, 35, 15);
+	kd_add_box(ktree, 2, -3, 20, 10, 35, 15);
+#ifdef TARGET_GBA
+	((volatile uint16_t *)VPAL0)[0] = 0x1F<<5;
+#endif
 
 	printf("\nOptimising\n");
 	for(i = ktree->size-1; i >= 0; i--)
@@ -406,6 +426,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
+#ifdef TARGET_GBA
+	((volatile uint16_t *)VPAL0)[0] = 0;
+#endif
+
+#ifndef TARGET_GBA
 	printf("\nTree:\n");
 	kd_print(ktree, -1, 0, '=');
 	printf("\n");
@@ -460,10 +485,45 @@ int main(int argc, char *argv[])
 		printf("\n");
 	}
 
-	printf("\nNode count: %i\n", ktree->size);
+	printf("\nNode count: %i\n", (int)ktree->size);
+#endif
 
 #ifdef TARGET_GBA
 	render_loop(ktree);
+#else
+	printf("\nTesting traces\n");
+	for(y = 0; y < 35; y++)
+	{
+		for(x = 0; x < 80; x++)
+		{
+			int rnode = 0;
+			char c = '.';
+
+			while(rnode >= 0)
+			{
+				kdnode *kd = &ktree->data[rnode];
+				int offs = (kd->axis == 0 ? x : y);
+				c = (kd->axis == 0 ? 'x' : 'y');
+
+				if(offs < kd->offs)
+				{
+					rnode = kd->ineg;
+					c -= 0x20;
+
+				} else {
+					rnode = kd->ipos;
+
+				}
+			}
+
+			if(c == ' ' && rnode != -1) c = '0'+(-1-rnode);
+			printf("%c", c);
+		}
+
+		printf("\n");
+	}
+
+	// note, this is using a slow method, hence why it's not in the GBA ver
 #endif
 
 	return 0;
